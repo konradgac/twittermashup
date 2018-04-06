@@ -1,5 +1,6 @@
 package model;
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
 import akka.actor.Props;
 import java.time.LocalDateTime;
 import  java.util.concurrent.ConcurrentLinkedQueue;
@@ -8,8 +9,8 @@ import java.time.temporal.ChronoUnit;
 
 public class Collector extends AbstractActor {
 
-    static public Props props(long timePeriod) {
-        return Props.create(Collector.class, () -> new Collector(timePeriod));
+    static public Props props(long timePeriod,ActorRef memcachedActor) {
+        return Props.create(Collector.class, () -> new Collector(timePeriod,memcachedActor));
     }
 
     //#collector-messages
@@ -29,8 +30,9 @@ public class Collector extends AbstractActor {
 
 
 
-    private Collector(long periodSec) {
+    private Collector(long periodSec,ActorRef memcachedActor) {
         this.periodSec=periodSec;
+        this.memcachedActor = memcachedActor;
     }
 
     @Override
@@ -38,14 +40,16 @@ public class Collector extends AbstractActor {
         return receiveBuilder()
                 .match(AddTweet.class, tweet -> {
                     queue.add(new TweetInfo(tweet.key,tweet.timeMarker));
-                    System.out.println("Adding tweet to query: "+queue.size());
+                    memcachedActor.tell(new MemcachedJava.InsertKey(tweet.key),ActorRef.noSender());
+                    //System.out.println("Adding tweet to query: "+queue.size());
                 })
                 .match(UpdateQueue.class, x -> {
 
                     while(!queue.isEmpty() && queue.peek().shouldRemove()){
                         System.out.println(queue.size());
                         TweetInfo ti = queue.poll();
-                        System.out.println("Removing tweet info: "+ti.key+ " "+queue.size());
+                        memcachedActor.tell(new MemcachedJava.DecrementKey(ti.key),ActorRef.noSender());
+                        //System.out.println("Removing tweet info: "+ti.key+ " "+queue.size());
                     }
                 })
                 .build();
@@ -55,6 +59,7 @@ public class Collector extends AbstractActor {
 
     private long  periodSec;
 
+    private final ActorRef memcachedActor;
 
     private class TweetInfo{
 

@@ -75,7 +75,7 @@ public class Streamer extends AbstractActor {
         }
 
         public void onStatus(Status status) {
-            System.out.println(status.getLang());
+            //System.out.println(status.getLang());
                 collector.tell(new Collector.AddTweet(status.getLang(), LocalDateTime.now()), ActorRef.noSender());
 
         }

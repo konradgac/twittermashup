@@ -3,6 +3,7 @@ import akka.actor.ActorSystem;
 
 import model.Collector;
 import model.Streamer;
+import model.MemcachedJava;
 
 public class Main {
     public static void main(String[] args) {
@@ -11,7 +12,12 @@ public class Main {
             //#create-actors
 
 
-            final ActorRef collectorActor = system.actorOf(Collector.props(1), "collectorActor");
+
+        final ActorRef cacheActor =
+                system.actorOf(MemcachedJava.props(), "cacheActor");
+
+        final ActorRef collectorActor =
+                system.actorOf(Collector.props(10,cacheActor), "collectorActor");
 
         final ActorRef streamerActor =
                 system.actorOf(Streamer.props(collectorActor), "streamerActor");
@@ -19,7 +25,8 @@ public class Main {
             //#create-actors
 
             //#main-send-messages
-            streamerActor.tell(new Streamer.StreamByKeyword("facebook"), ActorRef.noSender());
+            streamerActor.tell(new Streamer.StreamByKeyword("duda"), ActorRef.noSender());
+
             //#main-send-messages
             while(true){
 
@@ -27,6 +34,7 @@ public class Main {
                     System.out.println("Sleep exception");
                     break;}
                 collectorActor.tell(new Collector.UpdateQueue(),ActorRef.noSender());
+                cacheActor.tell(new MemcachedJava.GetValue("en"),ActorRef.noSender());
             }
 
     }
