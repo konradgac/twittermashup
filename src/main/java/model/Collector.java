@@ -3,21 +3,19 @@ import akka.actor.AbstractActor;
 import akka.actor.Props;
 import java.time.LocalDateTime;
 import  java.util.concurrent.ConcurrentLinkedQueue;
-import java.time.Instant;
-import java.time.temporal.Temporal;
 import java.time.temporal.ChronoUnit;
 
 
 public class Collector extends AbstractActor {
 
-    static public Props props() {
-        return Props.create(Collector.class, () -> new Collector());
+    static public Props props(long timePeriod) {
+        return Props.create(Collector.class, () -> new Collector(timePeriod));
     }
 
     //#collector-messages
     static public class AddTweet {
-        private static String key;
-        private static LocalDateTime timeMarker;
+        private  String key;
+        private  LocalDateTime timeMarker;
         public AddTweet(String key,LocalDateTime timeMarker){
             this.key=key;
             this.timeMarker = timeMarker;
@@ -31,7 +29,7 @@ public class Collector extends AbstractActor {
 
 
 
-    public Collector(long periodSec) {
+    private Collector(long periodSec) {
         this.periodSec=periodSec;
     }
 
@@ -40,13 +38,14 @@ public class Collector extends AbstractActor {
         return receiveBuilder()
                 .match(AddTweet.class, tweet -> {
                     queue.add(new TweetInfo(tweet.key,tweet.timeMarker));
-                    System.out.println("Adding tweet to query");
+                    System.out.println("Adding tweet to query: "+queue.size());
                 })
                 .match(UpdateQueue.class, x -> {
 
-                    while(queue.peek().shouldRemove()){
+                    while(!queue.isEmpty() && queue.peek().shouldRemove()){
+                        System.out.println(queue.size());
                         TweetInfo ti = queue.poll();
-                        System.out.println("Removing tweet info: "+ti.key);
+                        System.out.println("Removing tweet info: "+ti.key+ " "+queue.size());
                     }
                 })
                 .build();
@@ -56,20 +55,21 @@ public class Collector extends AbstractActor {
 
     private long  periodSec;
 
+
     private class TweetInfo{
 
         final private String key;
         final private LocalDateTime timeMarker;
 
-        public TweetInfo(String key,LocalDateTime timeMarker){
+        private TweetInfo(String key,LocalDateTime timeMarker){
             this.key=key;
             this.timeMarker = timeMarker;
         }
 
-        public boolean shouldRemove(){
+        private boolean shouldRemove(){
             LocalDateTime now = LocalDateTime.now();
             long p2 = ChronoUnit.SECONDS.between(timeMarker, now);
-            return p2 < periodSec;
+            return p2 > periodSec;
         }
     }
 }

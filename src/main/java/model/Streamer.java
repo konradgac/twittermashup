@@ -1,25 +1,28 @@
 package model;
 import akka.actor.AbstractActor;
 import akka.actor.Props;
+import akka.actor.ActorRef;
 import twitter4j.*;
 import twitter4j.conf.Configuration;
 import twitter4j.conf.ConfigurationBuilder;
-
+import java.time.LocalDateTime;
 
 
 public class Streamer extends AbstractActor {
 
-    static public Props props() {
-        return Props.create(Streamer.class, () -> new Streamer());
+    static public Props props(ActorRef collector) {
+        return Props.create(Streamer.class, () -> new Streamer(collector));
     }
 
     //#model.Streamer-messages
+
 
     static public class StreamByKeyword {
         private final String keyword;
 
         public StreamByKeyword(String keyword) {
             this.keyword=keyword;
+
         }
     }
 
@@ -38,9 +41,13 @@ public class Streamer extends AbstractActor {
             .setOAuthAccessTokenSecret("bYkRiddbTvGqQyjaYuxKG0qFKZRIa6ygOvz1mY32IyZzc")
             .build();
 
+    private final ActorRef collector;
+    private ActorRef getCollector(){
+        return collector;
+    }
 
-    public Streamer() {
-
+    private Streamer(ActorRef collector) {
+        this.collector=collector;
     }
 
     @Override
@@ -48,7 +55,7 @@ public class Streamer extends AbstractActor {
         return receiveBuilder()
                 .match(StreamByKeyword.class, sbk -> {
                     TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
-                    twitterStream.addListener(new BasicListener());
+                    twitterStream.addListener(new CountryListener(getCollector()));
                     twitterStream.filter(new FilterQuery().track(sbk.keyword));
                 })
                 .match(Kill.class, x -> {
@@ -59,10 +66,18 @@ public class Streamer extends AbstractActor {
     }
 
     //Listener Class for processing stream
-    private class BasicListener implements StatusListener{
-        public void onStatus(Status status) {
+    private class CountryListener implements StatusListener{
 
-           System.out.println("@" + status.getUser().getScreenName()+" "+status.getText());
+        private final ActorRef collector;
+
+        private CountryListener(ActorRef collector){
+          this.collector =collector;
+        }
+
+        public void onStatus(Status status) {
+            System.out.println(status.getLang());
+                collector.tell(new Collector.AddTweet(status.getLang(), LocalDateTime.now()), ActorRef.noSender());
+
         }
 
         public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {}
@@ -77,4 +92,6 @@ public class Streamer extends AbstractActor {
             ex.printStackTrace();
         }
     }
+
+
 }

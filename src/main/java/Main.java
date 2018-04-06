@@ -1,13 +1,8 @@
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 
-import java.io.IOException;
-
 import model.Collector;
 import model.Streamer;
-
-import static java.lang.Thread.sleep;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,23 +10,24 @@ public class Main {
 
             //#create-actors
 
-            final ActorRef streamerActor =
-                    system.actorOf(Streamer.props(), "streamerActor");
+
+            final ActorRef collectorActor = system.actorOf(Collector.props(1), "collectorActor");
+
+        final ActorRef streamerActor =
+                system.actorOf(Streamer.props(collectorActor), "streamerActor");
 
             //#create-actors
 
             //#main-send-messages
-            streamerActor.tell(new Streamer.StreamByKeyword("poland"), ActorRef.noSender());
+            streamerActor.tell(new Streamer.StreamByKeyword("facebook"), ActorRef.noSender());
             //#main-send-messages
+            while(true){
 
+                try{ Thread.sleep(10);}catch(Exception en){
+                    System.out.println("Sleep exception");
+                    break;}
+                collectorActor.tell(new Collector.UpdateQueue(),ActorRef.noSender());
+            }
 
-        try {
-            System.in.read();
-
-        } catch (IOException ioe) {
-            system.stop(streamerActor);
-        } finally {
-            system.terminate();
-        }
     }
 }
