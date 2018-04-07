@@ -1,5 +1,6 @@
 package model;
 import akka.actor.AbstractActor;
+import akka.actor.Actor;
 import akka.actor.Props;
 import akka.actor.ActorRef;
 import twitter4j.*;
@@ -10,8 +11,8 @@ import java.time.LocalDateTime;
 
 public class Streamer extends AbstractActor {
 
-    static public Props props(ActorRef collector) {
-        return Props.create(Streamer.class, () -> new Streamer(collector));
+    static public Props props(ActorRef collector,ActorRef writer) {
+        return Props.create(Streamer.class, () -> new Streamer(collector,writer));
     }
 
     //#model.Streamer-messages
@@ -42,12 +43,19 @@ public class Streamer extends AbstractActor {
             .build();
 
     private final ActorRef collector;
+    private final ActorRef writer;
+
     private ActorRef getCollector(){
         return collector;
     }
 
-    private Streamer(ActorRef collector) {
+    private ActorRef getWriter(){
+        return writer;
+    }
+
+    private Streamer(ActorRef collector,ActorRef writer) {
         this.collector=collector;
+        this.writer=writer;
     }
 
     @Override
@@ -55,7 +63,7 @@ public class Streamer extends AbstractActor {
         return receiveBuilder()
                 .match(StreamByKeyword.class, sbk -> {
                     TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
-                    twitterStream.addListener(new CountryListener(getCollector()));
+                    twitterStream.addListener(new CountryListener(getCollector(),getWriter()));
                     twitterStream.filter(new FilterQuery().track(sbk.keyword));
                 })
                 .match(Kill.class, x -> {
@@ -69,15 +77,18 @@ public class Streamer extends AbstractActor {
     private class CountryListener implements StatusListener{
 
         private final ActorRef collector;
+        private final ActorRef writer;
 
-        private CountryListener(ActorRef collector){
+        private CountryListener(ActorRef collector, ActorRef writer){
           this.collector =collector;
+          this.writer=writer;
         }
 
         public void onStatus(Status status) {
             //System.out.println(status.getLang());
-                collector.tell(new Collector.AddTweet(status.getLang(), LocalDateTime.now()), ActorRef.noSender());
-
+            collector.tell(new Collector.AddTweet(status.getLang(), LocalDateTime.now()), ActorRef.noSender());
+            Tweet tweet = new Tweet(status.getId(), Tweet.hashtagString(status.getHashtagEntities()), status.getLang(), status.getText(), status.getCreatedAt());
+            writer.tell(tweet, ActorRef.noSender());
         }
 
         public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {}

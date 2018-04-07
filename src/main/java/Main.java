@@ -1,6 +1,7 @@
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 
+import model.CassandraWriter;
 import model.Collector;
 import model.Streamer;
 import model.MemcachedJava;
@@ -19,8 +20,11 @@ public class Main {
         final ActorRef collectorActor =
                 system.actorOf(Collector.props(10,cacheActor), "collectorActor");
 
+        final ActorRef writerActor =
+                system.actorOf(CassandraWriter.props(), "writerActor");
+
         final ActorRef streamerActor =
-                system.actorOf(Streamer.props(collectorActor), "streamerActor");
+                system.actorOf(Streamer.props(collectorActor,writerActor), "streamerActor");
 
             //#create-actors
 
