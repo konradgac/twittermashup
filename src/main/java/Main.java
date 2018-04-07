@@ -29,7 +29,7 @@ public class Main extends Application {
         final String keyword = "facebook";
         final String langCode = "en";
         final int period = 1;
-        final int mod =3;
+        final int mod =1;
 
         final NumberAxis xAxis = new NumberAxis();
         final NumberAxis yAxis = new NumberAxis();
