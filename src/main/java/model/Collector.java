@@ -46,7 +46,7 @@ public class Collector extends AbstractActor {
                 .match(UpdateQueue.class, x -> {
 
                     while(!queue.isEmpty() && queue.peek().shouldRemove()){
-                        System.out.println(queue.size());
+                        //System.out.println(queue.size());
                         TweetInfo ti = queue.poll();
                         memcachedActor.tell(new MemcachedJava.DecrementKey(ti.key),ActorRef.noSender());
                         //System.out.println("Removing tweet info: "+ti.key+ " "+queue.size());

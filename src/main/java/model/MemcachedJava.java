@@ -15,6 +15,7 @@ public class MemcachedJava extends AbstractActor  {
         try {
             this.mcc = new MemcachedClient(new
                     InetSocketAddress("127.0.0.1", 11211));
+            this.mcc.flush();
         }
         catch (IOException e)
         {
@@ -66,7 +67,7 @@ public class MemcachedJava extends AbstractActor  {
 
             return receiveBuilder()
                     .match(InsertKey.class, x -> {
-                        System.out.println(mcc.get(x.keyword)); // to remove
+                        //System.out.println(mcc.get(x.keyword)); // to remove
                         if (mcc.get(x.keyword) == null) {
                             //System.out.println("set" +mcc.set(x.keyword, 0, 0));
                             mcc.set(x.keyword,0,1);
@@ -85,8 +86,7 @@ public class MemcachedJava extends AbstractActor  {
                     })
                     .match(GetValue.class, x -> {
                         Object tmp = mcc.get(x.keyword);
-                        if(tmp!=null)
-                        System.out.println("get"+ tmp); //mcc.get(x.keyword);
+
 
                     })
                     .match(ClearData.class, x -> {
