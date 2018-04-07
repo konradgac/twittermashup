@@ -26,9 +26,10 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        final String keyword = "trump";
+        final String keyword = "facebook";
         final String langCode = "en";
         final int period = 1;
+        final int mod =3;
 
         final NumberAxis xAxis = new NumberAxis();
         final NumberAxis yAxis = new NumberAxis();
@@ -70,10 +71,6 @@ public class Main extends Application {
 
         //#create-actors
 
-        //#main-send-messages
-        streamerActor.tell(new Streamer.StreamByKeyword(keyword), ActorRef.noSender());
-
-
 
         //#main-send-messages
 
@@ -98,23 +95,36 @@ public class Main extends Application {
         Thread plotThread = new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(50);
+                    Thread.sleep(20);
                     collectorActor.tell(new Collector.UpdateQueue(),ActorRef.noSender());
-                    //cacheActor.tell(new MemcachedJava.GetValue("en"),ActorRef.noSender());
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
         });
+        switch (mod){
+            case 1:
+                //#main-send-messages
+                streamerActor.tell(new Streamer.StreamByKeyword(keyword), ActorRef.noSender());
+                updateThread.setDaemon(true);
+                updateThread.start();
+                plotThread.start();
 
-        updateThread.setDaemon(true);
-        updateThread.start();
-         plotThread.start();
+                break;
+            case 2:
+                //#main-send-messages
+                streamerActor.tell(new Streamer.ShowStream(keyword), ActorRef.noSender());
+                break;
+            case 3:
+                streamerActor.tell(new Streamer.Top9(keyword), ActorRef.noSender());
+                break;
+
+        }
+
          }
 
 
     public static void main(String[] args) {
-
         launch(args);
     }
 }

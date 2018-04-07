@@ -26,6 +26,15 @@ public class Collector extends AbstractActor {
     static public class UpdateQueue{
         public UpdateQueue(){}
     }
+
+    static public class UpdateTop10{
+        private final String key;
+        private final int followers;
+        public UpdateTop10(String key, int followers){
+            this.key = key;
+            this.followers = followers;
+        }
+    }
     //#printer-messages
 
 
@@ -51,6 +60,9 @@ public class Collector extends AbstractActor {
                         memcachedActor.tell(new MemcachedJava.DecrementKey(ti.key),ActorRef.noSender());
                         //System.out.println("Removing tweet info: "+ti.key+ " "+queue.size());
                     }
+                })
+                .match(UpdateTop10.class, x -> {
+                  memcachedActor.tell(new MemcachedJava.Insert(x.key,x.followers),ActorRef.noSender());
                 })
                 .build();
     }

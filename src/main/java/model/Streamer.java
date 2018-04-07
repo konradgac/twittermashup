@@ -27,6 +27,24 @@ public class Streamer extends AbstractActor {
         }
     }
 
+    static public class ShowStream {
+        private final String keyword;
+
+        public ShowStream(String keyword) {
+            this.keyword=keyword;
+
+        }
+    }
+
+    static public class Top9 {
+        private final String keyword;
+
+        public Top9(String keyword) {
+            this.keyword=keyword;
+
+        }
+    }
+
     static public class Kill {
         public Kill() { }
     }
@@ -69,7 +87,16 @@ public class Streamer extends AbstractActor {
                 .match(Kill.class, x -> {
 
                 })
-
+                .match(ShowStream.class, sbk -> {
+                    TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
+                    twitterStream.addListener(new BasicListener(getWriter()));
+                    twitterStream.filter(new FilterQuery().track(sbk.keyword));
+                })
+                .match(Top9.class, sbk -> {
+                    TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
+                    twitterStream.addListener(new Top10Listener(getWriter(),collector));
+                    twitterStream.filter(new FilterQuery().track(sbk.keyword));
+                })
                 .build();
     }
 
@@ -104,5 +131,63 @@ public class Streamer extends AbstractActor {
         }
     }
 
+    private class Top10Listener implements StatusListener{
 
+
+        private final ActorRef writer;
+        private final ActorRef collector;
+
+        private Top10Listener(ActorRef writer, ActorRef collector){
+            this.writer=writer;
+            this.collector = collector;
+        }
+
+        public void onStatus(Status status) {
+
+            collector.tell(new Collector.UpdateTop10(status.getId()+"",status.getUser().getFollowersCount()),ActorRef.noSender());
+            Tweet tweet = new Tweet(status.getId(), Tweet.hashtagString(status.getHashtagEntities()), status.getLang(), status.getText(), status.getCreatedAt());
+            writer.tell(tweet, ActorRef.noSender());
+        }
+
+
+        public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {}
+
+        public void onTrackLimitationNotice(int numberOfLimitedStatuses) {}
+
+        public void onScrubGeo(long l, long l1) {}
+
+        public void onStallWarning(StallWarning stallWarning) {}
+
+        public void onException(Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private class BasicListener implements StatusListener{
+
+
+        private final ActorRef writer;
+
+        private BasicListener( ActorRef writer){
+            this.writer=writer;
+        }
+
+        public void onStatus(Status status) {
+            System.out.println(status.getId()+ " "+status.getUser().getName()+ " "+ status.getText()+ " ");
+            Tweet tweet = new Tweet(status.getId(), Tweet.hashtagString(status.getHashtagEntities()), status.getLang(), status.getText(), status.getCreatedAt());
+            writer.tell(tweet, ActorRef.noSender());
+        }
+
+        public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {}
+
+        public void onTrackLimitationNotice(int numberOfLimitedStatuses) {}
+
+        public void onScrubGeo(long l, long l1) {}
+
+        public void onStallWarning(StallWarning stallWarning) {}
+
+        public void onException(Exception ex) {
+            ex.printStackTrace();
+        }
+    }
 }
